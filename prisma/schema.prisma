@@ -1,0 +1,22 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model OverlaySession {
+  id               String   @id
+  tournamentId     String
+  title            String
+  baseColor        String
+  accentColor      String
+  selectedMatchKey String?
+  cachedTournament Json
+  cachedStandings  Json
+  cachedPairingGroup Json
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
