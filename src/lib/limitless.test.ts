@@ -201,6 +201,36 @@ test("parses teamlists from the public standings page when JSON standings are ga
   assert.equal(standings[1].decklist?.length, 0);
 });
 
+test("parses bracket-match blocks during live top cut", () => {
+  const parsed = parsePublicPairingsHtml(`
+    <div class="bracket-container"><div class="live-bracket"><div class="bracket-matches">
+      <div class="bracket-match" data-slot="T8-1" data-wm="T4-1" data-match="m1">
+        <a class="label">T8-1</a>
+        <div class="players">
+          <div class="live-bracket-player" data-id="alice"><a class="name" href="#">Alice</a><div class="score">1</div></div>
+          <div class="live-bracket-player winner" data-id="bob"><a class="name" href="#">Bob</a><div class="score">2</div></div>
+        </div>
+      </div>
+      <div class="bracket-match" data-slot="T8-2" data-match="m2">
+        <a class="label">T8-2</a>
+        <div class="players">
+          <div class="live-bracket-player" data-id="cara"><a class="name" href="#">Cara</a><div class="score">0</div></div>
+          <div class="live-bracket-player" data-id="dave"><a class="name" href="#">Dave</a><div class="score">0</div></div>
+        </div>
+      </div>
+    </div></div></div>
+  `);
+
+  assert.equal(parsed.pairings.length, 2);
+  assert.equal(parsed.pairings[0].phase, 2);
+  assert.equal(parsed.pairings[0].player1, "alice");
+  assert.equal(parsed.pairings[0].player2, "bob");
+  assert.equal(parsed.pairings[0].winner, "bob");
+  assert.equal(parsed.pairings[0].match, "T8-1");
+  assert.equal(parsed.pairings[1].winner, undefined);
+  assert.equal(parsed.standings.length, 4);
+});
+
 test("parses public active pairings and player display names", () => {
   const parsed = parsePublicPairingsHtml(`
     <table data-tournament="abc123" data-round="3">

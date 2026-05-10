@@ -423,10 +423,101 @@ export function parsePublicPairingsHtml(html: string): {
     row = rowRegex.exec(html);
   }
 
+  for (const bracketMatch of extractBracketMatches(html)) {
+    const players = bracketMatch.players;
+    const winner = players.find((player) => player.isWinner)?.id;
+
+    for (const player of players) {
+      if (!standings.has(player.id)) {
+        standings.set(player.id, {
+          player: player.id,
+          name: player.name,
+          decklist: []
+        });
+      }
+    }
+
+    if (players[0]) {
+      pairings.push({
+        phase: 2,
+        round: BRACKET_ROUND,
+        match: bracketMatch.slot,
+        player1: players[0].id,
+        player2: players[1]?.id,
+        winner: winner ?? undefined
+      });
+    }
+  }
+
   return {
     pairings,
     standings: [...standings.values()]
   };
+}
+
+/**
+ * Synthetic round number for bracket matches scraped from HTML. The live JSON pairings endpoint already differentiates phase 1 (Swiss) from phase 2 (top cut); the public HTML bracket DOM doesn't expose a round, so we pick a value high enough that bracket pairings always sort above any reasonable Swiss round count when `getLatestRelevantPairings` chooses the active group.
+ */
+const BRACKET_ROUND = 99;
+
+type BracketPlayerRow = {
+  id: string;
+  name: string;
+  isWinner: boolean;
+};
+
+type BracketMatchRow = {
+  slot: string;
+  matchId: string;
+  players: BracketPlayerRow[];
+};
+
+function extractBracketMatches(html: string): BracketMatchRow[] {
+  const openRegex = /<div\s+class=["']bracket-match["'][^>]*>/gi;
+  const opens: number[] = [];
+  let open = openRegex.exec(html);
+
+  while (open) {
+    opens.push(open.index);
+    open = openRegex.exec(html);
+  }
+
+  if (opens.length === 0) {
+    return [];
+  }
+
+  const playerRegex =
+    /<div\s+class=["']live-bracket-player(\s+winner)?["'][^>]*data-id=["']([^"']+)["'][^>]*>[\s\S]*?<a\s+class=["']name["'][^>]*>([\s\S]*?)<\/a>/gi;
+  const matches: BracketMatchRow[] = [];
+
+  for (let i = 0; i < opens.length; i++) {
+    const start = opens[i];
+    const end = i + 1 < opens.length ? opens[i + 1] : html.length;
+    const block = html.slice(start, end);
+    const slot = block.match(/data-slot=["']([^"']+)["']/i)?.[1];
+    const matchId = block.match(/data-match=["']([^"']+)["']/i)?.[1];
+
+    if (!slot || !matchId) {
+      continue;
+    }
+
+    const players: BracketPlayerRow[] = [];
+    playerRegex.lastIndex = 0;
+    let player = playerRegex.exec(block);
+
+    while (player && players.length < 2) {
+      players.push({
+        id: decodeHtml(player[2]),
+        name: stripTags(player[3]),
+        isWinner: Boolean(player[1])
+      });
+      player = playerRegex.exec(block);
+    }
+
+    matches.push({ slot: decodeHtml(slot), matchId: decodeHtml(matchId), players });
+  }
+
+  return matches;
 }
 
 /**

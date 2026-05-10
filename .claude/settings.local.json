@@ -5,7 +5,15 @@
       "Bash(awk 'BEGIN{RS=\"<tr\"} /data-placing/ {print \"ROW:\" $0; print \"---\"}' e:/champs-layout/next-dev/test-standings.html)",
       "Bash(rm e:/champs-layout/next-dev/test-standings.json e:/champs-layout/next-dev/test-standings.html)",
       "Bash(npx tsc *)",
-      "Bash(npm test *)"
+      "Bash(npm test *)",
+      "Bash(curl -sL \"https://play.limitlesstcg.com/api/tournaments/695eef13ba66621ba08b6d26/pairings\" -H \"accept: application/json\" -o e:/champs-layout/next-dev/probe-pairings.json -w \"HTTP %{http_code}\\\\n\")",
+      "Bash(node -e \"const d=require\\('e:/champs-layout/next-dev/probe-pairings.json'\\); const phase2 = d.filter\\(p => p.phase === 2\\); console.log\\('Phase 2 samples:'\\); console.log\\(JSON.stringify\\(phase2.slice\\(0,2\\), null, 2\\)\\);\")",
+      "Bash(node -e \"const d=require\\('e:/champs-layout/next-dev/probe-pairings.json'\\); const phase2 = d.filter\\(p => p.phase === 2\\); console.log\\('All phase 2 matches:'\\); for\\(const p of phase2\\) console.log\\(JSON.stringify\\(p\\)\\);\")",
+      "Bash(curl -sL \"https://play.limitlesstcg.com/tournament/695eef13ba66621ba08b6d26/pairings\" -H \"accept: text/html\" -o e:/champs-layout/next-dev/probe-pairings.html -w \"HTTP %{http_code}\\\\n\")",
+      "Bash(grep -oE \"<select[^>]*>[\\\\\\\\s\\\\\\\\S]*?</select>\" e:/champs-layout/next-dev/probe-pairings.html)",
+      "Bash(node -e \"const fs=require\\('fs'\\); const h=fs.readFileSync\\('e:/champs-layout/next-dev/probe-pairings.html','utf8'\\); const m=h.match\\(/<div class=\\\\\"bracket-match\\\\\"[^>]*>[\\\\s\\\\S]*?<\\\\/div>\\\\s*<\\\\/div>/g\\); console.log\\('matches:', m && m.length\\); if\\(m\\) console.log\\(m[0]\\);\")",
+      "Bash(curl -sL \"https://play.limitlesstcg.com/api/tournaments/69fce08b4f71d664893ef783/pairings\" -H \"accept: application/json\" -w \"\\\\nHTTP %{http_code}\\\\n\" -o e:/champs-layout/next-dev/probe-active-pairings.json)",
+      "Bash(node -e \"const fs=require\\('fs'\\); const h=fs.readFileSync\\('e:/champs-layout/next-dev/probe-pairings.html','utf8'\\); const m=h.match\\(/<div class=\\\\\"bracket-match\\\\\"[^>]*>[\\\\s\\\\S]*?<\\\\/div>\\\\s*<\\\\/div>\\\\s*<\\\\/div>/g\\); if\\(m\\) console.log\\(m[0]\\);\")"
     ],
     "additionalDirectories": [
       "e:\\champs-layout\\next-dev"
