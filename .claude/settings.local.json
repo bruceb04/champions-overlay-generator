@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s -H \"accept: text/html\" -o e:/champs-layout/next-dev/test-standings.html -w \"HTTP %{http_code}\\\\n\" \"https://play.limitlesstcg.com/tournament/69fce08b4f71d664893ef783/standings\")",
+      "Bash(awk 'BEGIN{RS=\"<tr\"} /data-placing/ {print \"ROW:\" $0; print \"---\"}' e:/champs-layout/next-dev/test-standings.html)",
+      "Bash(rm e:/champs-layout/next-dev/test-standings.json e:/champs-layout/next-dev/test-standings.html)",
+      "Bash(npx tsc *)",
+      "Bash(npm test *)"
+    ],
+    "additionalDirectories": [
+      "e:\\champs-layout\\next-dev"
+    ]
+  }
+}

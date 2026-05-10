@@ -313,6 +313,14 @@ export async function fetchStandings(tournamentId: string): Promise<Standing[]> 
     return parseStandingsResponse(json);
   } catch {
     try {
+      const standings = parsePublicStandingsHtml(
+        await fetchHtml(`/tournament/${tournamentId}/standings`)
+      );
+
+      if (standings.length > 0) {
+        return standings;
+      }
+
       return parsePublicPairingsHtml(
         await fetchHtml(`/tournament/${tournamentId}/pairings`)
       ).standings;
@@ -419,6 +427,61 @@ export function parsePublicPairingsHtml(html: string): {
     pairings,
     standings: [...standings.values()]
   };
+}
+
+/**
+ * Scrapes the public standings page for ongoing tournaments where the JSON standings endpoint is gated behind tournament completion. Each row exposes player id via the player profile link and the 6-mon team via `<td class="vgc-team">` entries.
+ */
+export function parsePublicStandingsHtml(html: string): Standing[] {
+  const rowRegex = /<tr\s+data-placing=["']\d+["']([^>]*)>([\s\S]*?)<\/tr>/gi;
+  const playerLinkRegex = /\/player\/([^"'/?#]+)/i;
+  const teamCellRegex = /<td\s+class=["']vgc-team["'][^>]*>([\s\S]*?)<\/td>/i;
+  const teamEntryRegex =
+    /\/metagame\/([a-z0-9-]+)["'][^>]*data-tooltip=["']([^"']+)["']/gi;
+  const standings: Standing[] = [];
+  let row = rowRegex.exec(html);
+
+  while (row) {
+    const attributes = row[1];
+    const content = row[2];
+    const playerId = decodeHtml(content.match(playerLinkRegex)?.[1] ?? "");
+    const name = decodeHtml(
+      attributes.match(/data-name=["']([^"']+)["']/i)?.[1] ?? ""
+    );
+    const country = attributes.match(/data-country=["']([^"']+)["']/i)?.[1] ?? null;
+
+    if (!playerId || !name) {
+      row = rowRegex.exec(html);
+      continue;
+    }
+
+    const teamCell = content.match(teamCellRegex)?.[1] ?? "";
+    const decklist: Pokemon[] = [];
+    teamEntryRegex.lastIndex = 0;
+    let entry = teamEntryRegex.exec(teamCell);
+
+    while (entry && decklist.length < 6) {
+      decklist.push({
+        id: entry[1],
+        name: decodeHtml(entry[2]),
+        item: null,
+        ability: null,
+        tera: null
+      });
+      entry = teamEntryRegex.exec(teamCell);
+    }
+
+    standings.push({
+      player: playerId,
+      name,
+      country: country ? decodeHtml(country) : null,
+      decklist
+    });
+
+    row = rowRegex.exec(html);
+  }
+
+  return standings;
 }
 
 export function makePairingKey(pairing: Pairing, index = 0): string {
@@ -576,5 +639,5 @@ export async function fetchHydratedLatestPairings(
 }
 
 export function showdownSpriteUrl(pokemonId: string): string {
-  return `https://play.pokemonshowdown.com/sprites/gen5/${pokemonId.toLowerCase()}.png`;
+  return `https://r2.limitlesstcg.net/pokemon/gen9/${pokemonId}.png`;
 }

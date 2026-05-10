@@ -416,8 +416,8 @@ h2 {
 }
 
 .pokemonSlot img {
-  width: 92%;
-  height: 92%;
+  width: 72%;
+  height: 72%;
   object-fit: contain;
   image-rendering: auto;
 }

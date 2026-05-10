@@ -7,6 +7,7 @@ import {
   hydratePairingGroup,
   mergeTeamsIntoPairingGroup,
   parsePublicPairingsHtml,
+  parsePublicStandingsHtml,
   parsePublicTournamentDetailsHtml,
   parseStandingsResponse,
   standingsIndexByPlayer
@@ -171,6 +172,33 @@ test("standings index dedupes by primary player id", () => {
 
   assert.equal(map.get("One")?.name, "A");
   assert.equal(map.get("two")?.name, "B");
+});
+
+test("parses teamlists from the public standings page when JSON standings are gated", () => {
+  const standings = parsePublicStandingsHtml(`
+    <table class="striped">
+      <tr data-placing="1" data-name="Alice" data-country="US">
+        <td>1</td>
+        <td><a href="/tournament/abc/player/alice">Alice</a></td>
+        <td class="vgc-team">
+          <a href="/tournament/abc/metagame/whimsicott" data-tooltip="Whimsicott"><img/></a>
+          <a href="/tournament/abc/metagame/floette-eternal" data-tooltip="Eternal Flower Floette"><img/></a>
+        </td>
+      </tr>
+      <tr data-placing="2" data-name="Bob">
+        <td>2</td>
+        <td><a href="/tournament/abc/player/bob">Bob</a></td>
+        <td class="vgc-team"></td>
+      </tr>
+    </table>
+  `);
+
+  assert.equal(standings.length, 2);
+  assert.equal(standings[0].player, "alice");
+  assert.equal(standings[0].decklist?.length, 2);
+  assert.equal(standings[0].decklist?.[0].id, "whimsicott");
+  assert.equal(standings[0].decklist?.[1].name, "Eternal Flower Floette");
+  assert.equal(standings[1].decklist?.length, 0);
 });
 
 test("parses public active pairings and player display names", () => {
