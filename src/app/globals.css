@@ -330,7 +330,7 @@ h2 {
 .overlayPlayer {
   position: absolute;
   width: min(43vw, 620px);
-  height: min(45vh, 380px);
+  height: min(54vh, 460px);
 }
 
 .overlayPlayer.left {
@@ -362,7 +362,7 @@ h2 {
 }
 
 .overlayPlayer.left .playerName {
-  left: clamp(46px, 4.8vw, 78px);
+  left: clamp(58px, 6vw, 96px);
   bottom: 0;
   border-radius: 0 8px 0 0;
   text-align: left;
@@ -371,7 +371,7 @@ h2 {
 
 .overlayPlayer.right .playerName {
   top: 0;
-  right: clamp(46px, 4.8vw, 78px);
+  right: clamp(58px, 6vw, 96px);
   border-radius: 0 0 0 8px;
   text-align: right;
   clip-path: polygon(24px 0, 100% 0, 100% 100%, 0 100%);
@@ -382,8 +382,8 @@ h2 {
   display: grid;
   grid-template-rows: repeat(6, minmax(0, 1fr));
   gap: 2px;
-  width: clamp(46px, 4.8vw, 78px);
-  height: min(45vh, 380px);
+  width: clamp(58px, 6vw, 96px);
+  height: min(54vh, 460px);
   padding: 2px;
   background: color-mix(in srgb, var(--base-color) 84%, transparent);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.34);

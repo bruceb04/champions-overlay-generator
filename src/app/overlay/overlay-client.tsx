@@ -24,7 +24,6 @@ type OverlayPayload = {
 };
 
 const LIVE_STATE_PREFIX = "vgc_overlay_live_";
-const SESSION_POLL_MS = 2000;
 
 function isHexColor(value: string | null): value is string {
   return Boolean(value && /^#[0-9a-f]{6}$/i.test(value));
@@ -122,41 +121,42 @@ export function OverlayClient({ id }: { id: string }) {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      if (!id) {
-        setError("Overlay session id is missing.");
-        return;
-      }
-
-      try {
-        const response = await fetch(`/api/session?id=${encodeURIComponent(id)}`, {
-          cache: "no-store"
-        });
-        const data = (await response.json()) as OverlayPayload & { error?: string };
-
-        if (!response.ok) {
-          throw new Error(data.error ?? "Overlay session unavailable.");
-        }
-
-        if (!cancelled) {
-          setPayload(applyLiveState(id, data));
-          setError("");
-        }
-      } catch (requestError) {
-        if (!cancelled) {
-          setError(requestError instanceof Error ? requestError.message : "Overlay session unavailable.");
-        }
-      }
+    if (!id) {
+      setError("Overlay session id is missing.");
+      return;
     }
 
-    load();
-    const poll = window.setInterval(() => {
-      if (!cancelled) {
-        load();
+    let cancelled = false;
+    const source = new EventSource(`/api/session/events?id=${encodeURIComponent(id)}`);
+
+    const onPayload = (event: MessageEvent<string>) => {
+      if (cancelled) {
+        return;
       }
-    }, SESSION_POLL_MS);
+      try {
+        const data = JSON.parse(event.data) as OverlayPayload;
+        setPayload(applyLiveState(id, data));
+        setError("");
+      } catch {
+        setError("Overlay session payload was malformed.");
+      }
+    };
+
+    const onSessionError = (event: MessageEvent<string>) => {
+      if (cancelled) {
+        return;
+      }
+      try {
+        const data = JSON.parse(event.data) as { error?: string };
+        setError(data.error ?? "Overlay session unavailable.");
+      } catch {
+        setError("Overlay session unavailable.");
+      }
+      source.close();
+    };
+
+    source.addEventListener("payload", onPayload as EventListener);
+    source.addEventListener("session-error", onSessionError as EventListener);
 
     function handleStorage(event: StorageEvent) {
       if (event.key !== `${LIVE_STATE_PREFIX}${id}`) {
@@ -169,7 +169,9 @@ export function OverlayClient({ id }: { id: string }) {
     window.addEventListener("storage", handleStorage);
     return () => {
       cancelled = true;
-      window.clearInterval(poll);
+      source.removeEventListener("payload", onPayload as EventListener);
+      source.removeEventListener("session-error", onSessionError as EventListener);
+      source.close();
       window.removeEventListener("storage", handleStorage);
     };
   }, [id]);

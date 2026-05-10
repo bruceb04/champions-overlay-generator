@@ -4,9 +4,10 @@ import {
   fetchPairings,
   fetchStandings,
   hydratePairingGroup,
-  mergeTeamsIntoPairingGroup,
   type Standing
 } from "@/lib/limitless";
+import { publishSession } from "@/lib/session-bus";
+import { loadSessionPayload } from "@/lib/session-payload";
 import { getSession, updateSession } from "@/lib/session-store";
 import {
   isHexColor,
@@ -18,39 +19,11 @@ function getId(request: Request): string {
   return new URL(request.url).searchParams.get("id") ?? "";
 }
 
-async function sessionPayload(id: string, requestUrl: string) {
-  const session = await getSession(id);
-  if (!session) {
-    return null;
-  }
-
-  const tournament = session.cachedTournament;
-  const group = mergeTeamsIntoPairingGroup(
-    session.cachedPairingGroup,
-    session.cachedStandings
-  );
-  const selectedPairing =
-    group.pairings.find((pairing) => pairing.key === session.selectedMatchKey) ??
-    null;
-
-  return {
-    session: {
-      ...session,
-      cachedPairingGroup: group,
-      cachedStandings: session.cachedStandings
-    },
-    tournament,
-    group,
-    selectedPairing,
-    overlayUrl: new URL(`/overlay?id=${session.id}`, requestUrl).toString()
-  };
-}
-
 export async function GET(request: Request) {
   const id = getId(request);
 
   try {
-    const payload = await sessionPayload(id, request.url);
+    const payload = await loadSessionPayload(id, request.url);
     if (!payload) {
       return NextResponse.json({ error: "Session not found." }, { status: 404 });
     }
@@ -135,7 +108,10 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Session not found." }, { status: 404 });
     }
 
-    const payload = await sessionPayload(id, request.url);
+    const payload = await loadSessionPayload(id, request.url);
+    if (payload) {
+      publishSession(id, payload);
+    }
     return NextResponse.json(payload);
   } catch (error) {
     return NextResponse.json(
